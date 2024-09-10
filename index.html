@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letter Destroy Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-950 h-screen flex items-center justify-center">
+    <div id="game-container" class="relative w-full max-w-5xl h-[600px] mx-auto bg-gray-900 overflow-hidden">
+        <div id="score" class="absolute top-4 left-4 text-white text-2xl font-bold">Score: 0</div>
+        <div id="start-screen" class="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center">
+            <h1 class="text-4xl font-bold text-white mb-6">Destroy the Letter</h1>
+            <p class="text-xl text-white mb-8 text-center max-w-md">
+                Type the letters you see on the falling blocks to destroy them. Don't let any block reach the bottom!
+            </p>
+            <button id="start-game" class="text-slate-900 px-5 py-2.5 rounded-md bg-white">
+                Start Game
+            </button>
+        </div>
+    </div>
+    <div id="game-over" class="hidden absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div class="w-full max-w-2xl bg-slate-50 px-8 py-12 rounded-md text-center">
+            <h2 class="text-2xl font-bold mb-4">Aw, game over.</h2>
+            <p id="final-score" class="text-xl mb-4">Final Score: 0</p>
+            <button id="play-again"
+                class="text-white px-5 py-2.5 rounded-md bg-slate-900 hover:bg-slate-800 transition-colors">
+                Play Again
+            </button>
+        </div>
+    </div>
+    <div class="absolute bottom-4 right-4 text-white text-sm">
+        Made with fun & ❤ by <a target="_blank" href="https://x.com/tanzirul_huda" class="underline">@tanzirul</a>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const scoreElement = document.getElementById('score');
+        const gameOverElement = document.getElementById('game-over');
+        const finalScoreElement = document.getElementById('final-score');
+        const playAgainButton = document.getElementById('play-again');
+        const startScreen = document.getElementById('start-screen');
+        const startGameButton = document.getElementById('start-game');
+
+        let score = 0;
+        let gameOver = false;
+        let difficulty = 1;
+        let blocks = [];
+        let gameLoopId;
+
+        function getRandomColor() {
+            const r = Math.floor(Math.random() * 200) + 55;
+            const g = Math.floor(Math.random() * 200) + 55;
+            const b = Math.floor(Math.random() * 200) + 55;
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function getRandomLetter() {
+            return String.fromCharCode(65 + Math.floor(Math.random() * 26));
+        }
+
+        function createBlock() {
+            const block = document.createElement('div');
+            const size = Math.floor(Math.random() * 40) + 40;
+            const x = Math.random() * (gameContainer.clientWidth - size);
+            const speed = (Math.random() * 1 + 0.5) * difficulty;
+            const letter = getRandomLetter();
+
+            block.className = 'absolute flex items-center justify-center text-black font-bold text-2xl';
+            block.style.width = `${size}px`;
+            block.style.height = `${size}px`;
+            block.style.left = `${x}px`;
+            block.style.top = '-50px';
+            block.style.backgroundColor = getRandomColor();
+            block.textContent = letter;
+
+            gameContainer.appendChild(block);
+            blocks.push({ element: block, speed, letter });
+        }
+
+        function moveBlocks() {
+            blocks.forEach((block, index) => {
+                const { element, speed } = block;
+                const currentTop = parseFloat(element.style.top);
+                element.style.top = `${currentTop + speed}px`;
+
+                if (currentTop > gameContainer.clientHeight) {
+                    gameContainer.removeChild(element);
+                    blocks.splice(index, 1);
+                    endGame();
+                }
+            });
+        }
+
+        function destroyBlock(letter) {
+            const blockIndex = blocks.findIndex(block => block.letter.toLowerCase() === letter.toLowerCase());
+            if (blockIndex !== -1) {
+                const { element } = blocks[blockIndex];
+                gameContainer.removeChild(element);
+                blocks.splice(blockIndex, 1);
+                score++;
+                scoreElement.textContent = `Score: ${score}`;
+                playDestroySound();
+            }
+        }
+
+        function playDestroySound() {
+            const audio = new Audio('./destroy.mp3');
+            audio.play();
+        }
+
+        function endGame() {
+            gameOver = true;
+            cancelAnimationFrame(gameLoopId);
+            gameOverElement.classList.remove('hidden');
+            finalScoreElement.textContent = `Final Score: ${score}`;
+        }
+
+        function resetGame() {
+            score = 0;
+            gameOver = false;
+            difficulty = 1;
+            blocks.forEach(block => gameContainer.removeChild(block.element));
+            blocks = [];
+            scoreElement.textContent = 'Score: 0';
+            gameOverElement.classList.add('hidden');
+        }
+
+        function gameLoop() {
+            if (!gameOver) {
+                if (Math.random() < 0.03 * difficulty) {
+                    createBlock();
+                }
+                moveBlocks();
+                gameLoopId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function increaseDifficulty() {
+            if (!gameOver) {
+                difficulty = Math.min(difficulty + 0.1, 2.5);
+                setTimeout(increaseDifficulty, 10000);
+            }
+        }
+
+        function startGame() {
+            resetGame();
+            startScreen.classList.add('hidden');
+            gameLoop();
+            setTimeout(increaseDifficulty, 10000);
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (!gameOver && startScreen.classList.contains('hidden')) {
+                destroyBlock(event.key);
+            }
+        });
+
+        playAgainButton.addEventListener('click', startGame);
+        startGameButton.addEventListener('click', startGame);
+    </script>
+</body>
+
+</html>
